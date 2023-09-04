@@ -14,40 +14,16 @@ int MAX_IMP[nbPCAServo] = { 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500
 int MIN_ANG[nbPCAServo] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 int MAX_ANG[nbPCAServo] = { 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180 };
 
-int isI2CConnected = 0;
 //Objects
 Adafruit_PWMServoDriver pca = Adafruit_PWMServoDriver(0x40);
 
 void setup() {
   //Init Serial USB
   Serial.begin(9600);
-  // while (!Serial);
-  // Serial.println();
-  // Serial.println(__FILE__);
-  // Serial.print("I2C_SCANNER_LIB_VERSION: ");
-  // Serial.println(I2C_SCANNER_LIB_VERSION);
 
-  // scanner.begin();
-
-  // for (int addr = 0; addr < 128; addr++)
-  // {
-  //   // if (addr % 8 == 0) Serial.println();
-  //   if (scanner.ping(addr))
-  //   {
-  //     Serial.print(addr);
-  //     isI2CConnected = 1;
-  //     Serial.println();
-  //   }
-  // }
-  // if (!isI2CConnected)
-  // {
-  //   Serial.println("disconnected");
-  // }
-  // Serial.println();
-  // Serial.println();
-
-  // delay(500);
-
+  while (!isI2Cconnected()) {
+  }
+  Serial.println("Servo starting");
   pca.begin();
   /*
    * In theory the internal oscillator (clock) is 25MHz but it really isn't
@@ -74,36 +50,50 @@ void setup() {
   // out for this!
   // Wire.setClock(400000);
 }
+
+
+int ang = 0;
+int servo_index = 0;
 void loop() {
-  pcaScenario();
-}
-void pcaScenario() { /* function pcaScenario */
-  ////Scenario to test servomotors controlled by PCA9685 I2C Module
-  for (int i = 0; i < 6; i++) {
-    Serial.print("Servo");
-    Serial.println(i);
-    //int middleVal=((MAX_IMP[i]+MIN_IMP[i])/2)/20000*4096; // conversion µs to pwmval
-    //pca.setPWM(i,0,middleVal);
-    for (int pos = (MAX_IMP[i] + MIN_IMP[i]) / 2; pos < MAX_IMP[i]; pos += 10) {
-      pca.writeMicroseconds(i, pos);
-      delay(10);
-    }
-    for (int pos = MAX_IMP[i]; pos > MIN_IMP[i]; pos -= 10) {
-      pca.writeMicroseconds(i, pos);
-      delay(10);
-    }
-    for (int pos = MIN_IMP[i]; pos < (MAX_IMP[i] + MIN_IMP[i]) / 2; pos += 10) {
-      pca.writeMicroseconds(i, pos);
-      delay(10);
-    }
-    pca.setPin(i, 0, true);  // deactivate pin i
-  }
+
+  ang += 1;
+  servo_index +=1;
+
+  ang %= 180;
+  servo_index %= 4;
+  int pulse = ang2pulse(ang);
+  
+  Serial.print(servo_index);
+  Serial.print("\t");
+  Serial.print(ang);
+  Serial.print("\t");
+  Serial.print(pulse);
+  Serial.println();
+
+  pca.writeMicroseconds(servo_index, pulse);
+  delayMicroseconds(1);
 }
 
-int jointToImp(double x, int i) { /* function jointToImp */
-  ////Convert joint angle into pwm command value
-  int imp = (x - MIN_ANG[i]) * (MAX_IMP[i] - MIN_IMP[i]) / (MAX_ANG[i] - MIN_ANG[i]) + MIN_IMP[i];
-  imp = max(imp, MIN_IMP[i]);
-  imp = min(imp, MAX_IMP[i]);
-  return imp;
+bool isI2Cconnected() {
+  bool isConnected = false;
+  scanner.begin();
+  for (int addr = 0; addr < 128; addr++) {
+    // if (addr % 8 == 0) Serial.println();
+    if (scanner.ping(addr)) {
+      Serial.print(addr);
+      isConnected = true;
+      Serial.println();
+    }
+  }
+  if (!isConnected) {
+    Serial.println("disconnected");
+  }
+  return isConnected;
+}
+
+int ang2pulse(long ang) {
+  long SERVOMIN = 550;
+  long SERVOMAX = 2450;
+  int pulse = map(ang, 0, 180, SERVOMIN, SERVOMAX);  // map angle of 0 to 180 to Servo min and Servo max
+  return pulse;
 }
