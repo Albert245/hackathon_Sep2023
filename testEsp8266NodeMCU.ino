@@ -1,18 +1,9 @@
 //Libraries
 #include <Wire.h>                     //https://www.arduino.cc/en/reference/wire
 #include <Adafruit_PWMServoDriver.h>  //https://github.com/adafruit/Adafruit-PWM-Servo-Driver-Library
-
 #include "I2C_SCANNER.h"
 
 I2C_SCANNER scanner;
-
-//Constants
-#define nbPCAServo 16
-//Parameters
-int MIN_IMP[nbPCAServo] = { 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500 };
-int MAX_IMP[nbPCAServo] = { 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500, 2500 };
-int MIN_ANG[nbPCAServo] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-int MAX_ANG[nbPCAServo] = { 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180, 180 };
 
 //Objects
 Adafruit_PWMServoDriver pca = Adafruit_PWMServoDriver(0x40);
@@ -21,9 +12,8 @@ void setup() {
   //Init Serial USB
   Serial.begin(9600);
 
-  while (!isI2Cconnected()) {
-  }
-  Serial.println("Servo starting");
+  while (!isI2Cconnected()) {}
+  Serial.println("PCA9685 connect successful");
   pca.begin();
   /*
    * In theory the internal oscillator (clock) is 25MHz but it really isn't
@@ -54,24 +44,23 @@ void setup() {
 
 int ang = 0;
 int servo_index = 0;
+
 void loop() {
 
-  ang += 1;
-  servo_index +=1;
+  for (servo_index = 0; servo_index < 4; servo_index++) {
+    for (ang = 0; ang < 181; ang++) {
+      int pulse = ang2pulse(ang);
+      Serial.print(servo_index);
+      Serial.print("\t");
+      Serial.print(ang);
+      Serial.print("\t");
+      Serial.print(pulse);
+      Serial.println();
 
-  ang %= 180;
-  servo_index %= 4;
-  int pulse = ang2pulse(ang);
-  
-  Serial.print(servo_index);
-  Serial.print("\t");
-  Serial.print(ang);
-  Serial.print("\t");
-  Serial.print(pulse);
-  Serial.println();
-
-  pca.writeMicroseconds(servo_index, pulse);
-  delayMicroseconds(1);
+      pca.writeMicroseconds(servo_index, pulse);
+      delay(1);
+    }
+  }
 }
 
 bool isI2Cconnected() {
